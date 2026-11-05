@@ -41,7 +41,8 @@ npm audit
 The build includes TypeScript, ESLint, SCSS lint and production documentation
 bundling. Existing unused-variable/decorator warnings remain. The GitHub Actions
 workflow runs the build, unit/HTTP tests, MongoDB integration tests and production
-dependency audit on Node 22. The workflow has read-only repository permissions.
+dependency audit on Node 22/MongoDB 7 and Node 24/MongoDB 4.4.1 for compatibility
+coverage. The workflow has read-only repository permissions.
 
 Local results: clean `npm ci --ignore-scripts` and `npm run build` passed;
 `npm test` passed 224 unit/HTTP tests across 18 suites and 24 real-MongoDB
@@ -60,11 +61,16 @@ References: [Express proxy trust](https://expressjs.com/en/guide/behind-proxies.
 
 ## Deployment status and preflight
 
-The user identified AWS Lightsail as the hosting platform. The exact instance,
-API domain, SSH access, service manager/container configuration, deployed commit,
-MongoDB version and restart procedure are not recorded in this repository or the
-available relevant local history. Production deployment is pending this
-identification. There has been no production restart or live health verification.
+Operational deployment evidence belongs in private release records rather than
+this public source repository. Record the verified target, current revision,
+launcher, runtime versions, artifact checksums and rollback directory there.
+Preserve existing process environment credentials without printing or saving
+them. Prepare the replacement release separately and retain the prior release.
+
+Because the old listener ignored `server.host`, explicitly reconcile the new
+bind setting with the existing effective listener before switching releases.
+Preserve the intended external reachability; do not infer it from the old
+configuration value alone.
 
 Before applying the release through the existing deployment procedure:
 
@@ -74,8 +80,8 @@ Before applying the release through the existing deployment procedure:
    source commit above.
 2. Check Node >=22.15, the actual MongoDB server version, existing API credentials
    and the reverse-proxy network path. This review tested MongoDB 7.0.28; the
-   production database version has not been verified. Do not run the integration
-   tests against production: they delete test collections.
+   production database version must be checked separately. Do not run the
+   integration tests against production: they delete test collections.
 3. Verify `server.host` is reachable by the existing proxy. A local proxy can use
    127.0.0.1. A container may require an explicit `0.0.0.0` bind with the existing
    restricted port exposure. Verify `trustedProxies` matches the actual proxy
