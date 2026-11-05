@@ -42,6 +42,30 @@ describe('Config', () => {
     expect(version).toStrictEqual(versionTestVal);
   });
 
+  it('get: ignores prototype keys at every level while retaining nested defaults', () => {
+    jest
+      .spyOn(Config, 'getUserSettings')
+      .mockReturnValue(
+        JSON.parse('{"__proto__":{"polluted":true},"server":{"__proto__":{"polluted":true},"port":9000}}')
+      );
+    const config: any = Config.get(true);
+    expect(config.polluted).toBeUndefined();
+    expect(config.server.polluted).toBeUndefined();
+    expect(config.server.port).toBe(9000);
+    expect(config.server.host).toBe('127.0.0.1');
+    expect(({} as any).polluted).toBeUndefined();
+  });
+
+  it('get: does not mutate cached default settings when a returned config is modified', () => {
+    jest.spyOn(Config, 'getUserSettings').mockReturnValue({});
+    const config = Config.get(true);
+    config.server.host = 'changed';
+    config.allowedOrigins.push('https://example.test');
+    const nextConfig = Config.get(true);
+    expect(nextConfig.server.host).toBe('127.0.0.1');
+    expect(nextConfig.allowedOrigins).toEqual([]);
+  });
+
   it('getUserSettings: should return an empty object if no user settings exist', () => {
     jest.spyOn(path, 'join').mockReturnValue(null);
     jest.spyOn(fs, 'existsSync').mockReturnValue(false);

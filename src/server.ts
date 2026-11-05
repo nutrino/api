@@ -16,6 +16,7 @@ import {
   NotImplementedException,
   OriginNotPermittedException,
   RequestThrottledException,
+  RequiredDataNotFoundException,
   SyncDataLimitExceededException,
   UnspecifiedException,
 } from './exception';
@@ -61,7 +62,11 @@ export const createLogger = (logStreams: bunyan.Stream[]): void => {
   try {
     logger = bunyan.createLogger({
       name: 'xBrowserSync_api',
-      serializers: bunyan.stdSerializers,
+      // A sync ID is a bearer credential; URLs, headers and error messages can contain it.
+      serializers: {
+        req: (req) => (req ? { method: req.method } : undefined),
+        err: (err) => (err ? { name: err.name } : undefined),
+      },
       streams: logStreams,
     });
   } catch (err) {
@@ -93,6 +98,10 @@ export const handleError = (
     case err.status === 413:
       err = new SyncDataLimitExceededException();
       responseObj = (err as SyncDataLimitExceededException).getResponseObject();
+      break;
+    case err.type === 'entity.parse.failed':
+      err = new RequiredDataNotFoundException('Invalid JSON request body');
+      responseObj = err.getResponseObject();
       break;
     // Otherwise return an UnspecifiedException
     default:
@@ -160,17 +169,10 @@ export const initApplication = (app: express.Express): void => {
     next();
   });
 
-  // If behind proxy use 'X-Forwarded-For' header for client ip address
+  // Only trust explicitly configured proxies, never every address in X-Forwarded-For.
   if (Config.get().server.behindProxy) {
-    app.enable('trust proxy');
+    app.set('trust proxy', Config.get().server.trustedProxies || 'loopback');
   }
-
-  // Process JSON-encoded bodies, set body size limit to config value or default to 500kb
-  app.use(
-    express.json({
-      limit: Config.get().maxSyncSize || 512000,
-    })
-  );
 
   // Enable support for CORS
   const corsOptions: cors.CorsOptions =
@@ -200,6 +202,13 @@ export const initApplication = (app: express.Express): void => {
       })
     );
   }
+
+  // Apply throttling before spending resources parsing request bodies.
+  app.use(
+    express.json({
+      limit: Config.get().maxSyncSize || 512000,
+    })
+  );
 };
 
 // Configures api routing
@@ -263,9 +272,13 @@ export const startService = async (app: express.Application): Promise<http.Serve
       cert: fs.readFileSync(Config.get().server.https.certPath),
       key: fs.readFileSync(Config.get().server.https.keyPath),
     };
-    server = https.createServer(options, app).listen(Config.get().server.port, null, serverListening);
+    server = https
+      .createServer(options, app)
+      .listen(Config.get().server.port, Config.get().server.host || '127.0.0.1', serverListening);
   } else {
-    server = http.createServer(app).listen(Config.get().server.port, null, serverListening);
+    server = http
+      .createServer(app)
+      .listen(Config.get().server.port, Config.get().server.host || '127.0.0.1', serverListening);
   }
 
   // Catches ctrl+c event

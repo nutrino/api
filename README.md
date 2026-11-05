@@ -28,7 +28,7 @@ Whilst running in a Docker container is the recommended way to run your xBrowser
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) 22.15 or newer
 - [MongoDB](https://www.mongodb.com/)
 
 ### 1. Clone the xBrowserSync API source repo
@@ -37,9 +37,8 @@ Whilst running in a Docker container is the recommended way to run your xBrowser
 
 ### 2. Install and build xBrowserSync API package
 
-  (Use the `unsafe-perm` flag if you get any permissions issues whilst trying to install):
-
-    $ npm install --unsafe-perm
+    $ npm ci --ignore-scripts
+    $ npm run build
 
 ### 3. Configure MongoDB databases
 
@@ -128,7 +127,8 @@ Config Setting | Description | Default Value
 `log.stdout.level` | Bunyan log level to capture: `trace`, `debug`, `info`, `warn`, `error`, `fatal`. | `info`
 `maxSyncs` | The maximum number of unique syncs to be stored on the service, once this limit is reached no more new syncs are permitted. Users with an existing sync ID are able to get and update their sync data as normal. This value multiplied by the maxSyncSize will determine the maximum amount of disk space used by the xBrowserSync service. Set as `0` to disable. | `5242`
 `maxSyncSize` | The maximum sync size in bytes. Note this is not equivalent to the size/amount of bookmarks as data is compressed and encrypted client-side before being sent to the service. | `512000` (500kb)
-`server.behindProxy` | Set to `true` if service is behind a proxy, client IP address will be set from [X-Forwarded-For](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For) header. Important: Do not set to `true` unless a proxy is present otherwise client IP address can easily be spoofed by malicious users. | `false`
+`server.behindProxy` | Enable forwarded client IPs only when a reverse proxy is present. Trust is limited to `server.trustedProxies`; forwarded addresses from other peers are ignored. | `false`
+`server.trustedProxies` | Express proxy address/CIDR string or array. Used when `behindProxy` is true. Defaults to loopback for a local reverse proxy; configure exact proxy addresses for other topologies. Do not trust arbitrary client-supplied forwarding chains. | `"loopback"`
 `server.host` | Host name or IP address to use for Node.js server for accepting incoming connections. | `127.0.0.1`
 `server.https.certPath` | Path to a valid SSL certificate. Required when HTTPS is enabled. | (Empty string, no path set)
 `server.https.enabled` | If enabled, the service is started using HTTPS. | `false`
@@ -156,6 +156,8 @@ Ensure that the path set in the `log.path` config value exists, and that the acc
 If you've made code changes you can run a fresh build with the command:
 
     $ npm run build
+
+See [the security assessment and deployment notes](docs/security-assessment.md) before upgrading an existing service.
 
 ## Testing
 

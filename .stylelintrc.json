@@ -1,12 +1,7 @@
 {
-  "extends": [
-    "stylelint-config-standard",
-    "stylelint-config-sass-guidelines",
-    "stylelint-prettier/recommended"
-  ],
+  "extends": ["stylelint-config-standard", "stylelint-config-sass-guidelines", "stylelint-prettier/recommended"],
   "rules": {
     "declaration-block-no-duplicate-properties": null,
-    "declaration-property-value-blacklist": null,
     "font-family-no-missing-generic-family-keyword": null,
     "max-nesting-depth": 20,
     "no-descending-specificity": null,
@@ -15,6 +10,14 @@
     "selector-max-compound-selectors": null,
     "selector-max-id": null,
     "selector-no-qualifying-type": null,
-    "selector-type-no-unknown": null
+    "selector-type-no-unknown": null,
+    "color-function-notation": "legacy",
+    "alpha-value-notation": "number",
+    "function-no-unknown": [
+      true,
+      {
+        "ignoreFunctions": ["dximagetransform.microsoft.gradient"]
+      }
+    ]
   }
 }

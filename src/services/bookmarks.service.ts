@@ -313,8 +313,18 @@ export class BookmarksService extends ApiService<NewSyncLogsService> {
         throw new SyncConflictException();
       }
 
-      // Update the bookmarks data corresponding to the sync id in the db
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate({ _id: id }, updatePayload, { new: true }).exec();
+      // Advance even within one millisecond so a previous timestamp cannot match a later write.
+      updatePayload.lastUpdated = new Date(Math.max(Date.now(), existingBookmarks.lastUpdated.getTime() + 1));
+
+      // Compare and update atomically: another write after the read must produce a conflict.
+      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
+        { _id: id, lastUpdated: existingBookmarks.lastUpdated },
+        updatePayload,
+        { new: true, runValidators: true }
+      ).exec();
+      if (!updatedBookmarks) {
+        throw new SyncConflictException();
+      }
 
       // Return the last updated date if bookmarks data found and updated
       const response: IGetLastUpdatedResponse = {

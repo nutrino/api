@@ -50,13 +50,14 @@ export class BookmarksRouter extends ApiRouter<BookmarksService> implements IApi
   async createBookmarks_v2(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Get posted sync version
-      const syncVersion = req.body.version;
+      const syncVersion = req.body?.version;
       if (!syncVersion) {
         throw new RequiredDataNotFoundException();
       }
+      this.validateSyncVersion(syncVersion);
 
       // Call service method to create new sync and return response as json
-      const newSync = await this.service.createBookmarks_v2(req.body.version, req);
+      const newSync = await this.service.createBookmarks_v2(syncVersion, req);
       res.json(newSync);
     } catch (err) {
       next(err);
@@ -80,7 +81,25 @@ export class BookmarksRouter extends ApiRouter<BookmarksService> implements IApi
 
   // Retrieves posted bookmarks data from request body
   getBookmarksData(req: Request): string {
-    return req.body.bookmarks || '';
+    const bookmarks = req.body?.bookmarks;
+    if (bookmarks === undefined) {
+      return '';
+    }
+    if (typeof bookmarks !== 'string') {
+      throw new RequiredDataNotFoundException('Bookmarks must be an encrypted string');
+    }
+    return bookmarks;
+  }
+
+  validateSyncVersion(version: unknown): void {
+    if (
+      typeof version !== 'string' ||
+      version.length > 64 ||
+      version.trim() !== version ||
+      !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
+    ) {
+      throw new RequiredDataNotFoundException('Invalid sync version');
+    }
   }
 
   // Retrieves last updated date for a given sync ID
@@ -155,14 +174,23 @@ export class BookmarksRouter extends ApiRouter<BookmarksService> implements IApi
         throw new RequiredDataNotFoundException();
       }
 
+      const { lastUpdated, version } = req.body;
+      if (version !== undefined && version !== null) {
+        this.validateSyncVersion(version);
+      }
+      if (
+        lastUpdated !== undefined &&
+        lastUpdated !== null &&
+        (typeof lastUpdated !== 'string' ||
+          lastUpdated.length !== 24 ||
+          !Number.isFinite(Date.parse(lastUpdated)) ||
+          new Date(lastUpdated).toISOString() !== lastUpdated)
+      ) {
+        throw new RequiredDataNotFoundException('Invalid lastUpdated timestamp');
+      }
+
       // Call service method to update bookmarks data and return response as json
-      const bookmarksSync = await this.service.updateBookmarks_v2(
-        id,
-        bookmarksData,
-        req.body.lastUpdated,
-        req.body.version,
-        req
-      );
+      const bookmarksSync = await this.service.updateBookmarks_v2(id, bookmarksData, lastUpdated, version, req);
       res.json(bookmarksSync);
     } catch (err) {
       next(err);

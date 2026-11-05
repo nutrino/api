@@ -243,6 +243,21 @@ describe('BookmarksRouter', () => {
     expect(response.status).toBe(401);
   });
 
+  it('permits only one concurrent write with the same lastUpdated value', async () => {
+    testConfig.dailyNewSyncsLimit = 0;
+    const created = await request(app).post('/bookmarks').send({ version: syncVersionTestVal });
+    expect(created.status).toBe(200);
+    const { id, lastUpdated } = created.body;
+    const responses = await Promise.all(
+      ['first', 'second'].map((bookmarks) => request(app).put(`/bookmarks/${id}`).send({ bookmarks, lastUpdated }))
+    );
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const winner = responses.findIndex((response) => response.status === 200);
+    const stored = await request(app).get(`/bookmarks/${id}`);
+    expect(stored.body.bookmarks).toBe(['first', 'second'][winner]);
+    expect(new Date(stored.body.lastUpdated).getTime()).toBeGreaterThan(new Date(lastUpdated).getTime());
+  });
+
   it('GET /bookmarks/:id/version should return a 200 status code and last updated date for the provided sync id', async () => {
     testConfig.dailyNewSyncsLimit = 0;
     jest.spyOn(Config, 'get').mockImplementation(() => {

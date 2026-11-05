@@ -8,13 +8,10 @@ export const connect = async (
   log?: (level: LogLevel, message: string, req?: Request, err?: Error) => void
 ): Promise<void> => {
   // Set the db connection options from config settings
-  const options: mongoose.ConnectionOptions = {
+  const options: mongoose.ConnectOptions = {
     connectTimeoutMS: Config.get().db.connTimeout,
     keepAlive: true,
     ssl: Config.get().db.useSRV || Config.get().db.ssl,
-    useFindAndModify: false,
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
   };
 
   // Configure db credentials

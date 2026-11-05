@@ -391,8 +391,8 @@ describe('InfoRouter', () => {
       updateBookmarks_v2: updateBookmarksV2Mock,
     };
     const router = new BookmarksRouter(null, serviceTest as any);
-    const lastUpdatedTest = 'lastUpdatedTest';
-    const versionTest = 'versionTest';
+    const lastUpdatedTest = '2026-01-01T00:00:00.000Z';
+    const versionTest = '1.5.0';
     const req: Partial<Request> = {
       body: {
         lastUpdated: lastUpdatedTest,

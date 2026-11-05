@@ -565,14 +565,14 @@ describe('Server', () => {
       },
     };
     jest.spyOn(Config, 'get').mockReturnValue(configSettingsTest);
-    const enableMock = jest.fn();
+    const setMock = jest.fn();
     const app: any = {
-      enable: enableMock,
+      set: setMock,
       options: jest.fn(),
       use: jest.fn(),
     };
     Server.initApplication(app);
-    expect(enableMock).toHaveBeenCalledWith('trust proxy');
+    expect(setMock).toHaveBeenCalledWith('trust proxy', 'loopback');
   });
 
   it('handleError: should set response status code to 500 if no status code provided', async () => {
@@ -751,7 +751,7 @@ describe('Server', () => {
     const app = {} as any;
     const server = await Server.startService(app);
     expect(createServerMock).toHaveBeenCalledWith(app);
-    expect(listenMock).toHaveBeenCalledWith(portTest, null, expect.anything());
+    expect(listenMock).toHaveBeenCalledWith(portTest, '127.0.0.1', expect.anything());
     expect(server).toBe(listenMockReturnValue);
   });
 
@@ -787,7 +787,7 @@ describe('Server', () => {
     const app = {} as any;
     const server = await Server.startService(app);
     expect(createServerMock).toHaveBeenCalledWith(optionsTest, app);
-    expect(listenMock).toHaveBeenCalledWith(portTest, null, expect.anything());
+    expect(listenMock).toHaveBeenCalledWith(portTest, '127.0.0.1', expect.anything());
     expect(server).toBe(listenMockReturnValue);
   });
 

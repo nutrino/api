@@ -538,6 +538,37 @@ describe('BookmarksService', () => {
     expect(logMock).not.toHaveBeenCalled();
   });
 
+  it('updateBookmarks_v2: rejects a competing write after reading the previous timestamp', async () => {
+    jest.spyOn(BookmarksModel, 'findById').mockReturnValue({
+      exec: () => Promise.resolve({ lastUpdated: createdDateTestVal }),
+    } as any);
+    const update = jest.spyOn(BookmarksModel, 'findOneAndUpdate').mockReturnValue({
+      exec: () => Promise.resolve(null),
+    } as any);
+    const service = new BookmarksService(null, logMock);
+    await expect(
+      service.updateBookmarks_v2('id', 'encrypted', createdDateTestVal.toISOString(), null, {} as Request)
+    ).rejects.toThrow(SyncConflictException);
+    expect(update).toHaveBeenCalledWith({ _id: 'id', lastUpdated: createdDateTestVal }, expect.any(Object), {
+      new: true,
+      runValidators: true,
+    });
+  });
+
+  it('updateBookmarks_v2: advances the timestamp even for writes within the same millisecond', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(createdDateTestVal.getTime());
+    jest.spyOn(BookmarksModel, 'findById').mockReturnValue({
+      exec: () => Promise.resolve({ lastUpdated: createdDateTestVal }),
+    } as any);
+    const update = jest.spyOn(BookmarksModel, 'findOneAndUpdate').mockReturnValue({
+      exec: () => Promise.resolve({ lastUpdated: createdDateTestVal }),
+    } as any);
+    update.mockClear();
+    const service = new BookmarksService(null, logMock);
+    await service.updateBookmarks_v2('id', 'encrypted', null, null, {} as Request);
+    expect(update.mock.calls[0][1].lastUpdated.getTime()).toBe(createdDateTestVal.getTime() + 1);
+  });
+
   it('getBookmarksCount: should return bookmarks count', async () => {
     const countTest = 1;
     jest.spyOn(BookmarksModel, 'estimatedDocumentCount').mockReturnValue({

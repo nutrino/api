@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'typeface-roboto-condensed';
 import DOMPurify from 'dompurify';
-import marked from 'marked';
+import { marked } from 'marked';
 import SmoothScroll from 'smooth-scroll';
 import { getCountryNameFromLocationCode, setCountryNames } from '../location';
 import { IGetInfoResponse } from '../services/info.service';

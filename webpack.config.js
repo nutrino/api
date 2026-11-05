@@ -10,7 +10,8 @@ module.exports = {
   },
   devtool: 'source-map',
   devServer: {
-    contentBase: Path.join(__dirname, 'dist'),
+    static: Path.join(__dirname, 'dist'),
+    host: '127.0.0.1',
     compress: true,
     port: 8083,
   },

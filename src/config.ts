@@ -1,4 +1,3 @@
-import merge from 'deepmerge';
 import fs from 'fs';
 import path from 'path';
 
@@ -34,6 +33,7 @@ export interface IConfigSettings {
   maxSyncSize?: number;
   server?: {
     behindProxy?: boolean;
+    trustedProxies?: string | string[];
     host?: string;
     https?: {
       certPath?: string;
@@ -60,6 +60,24 @@ export interface IConfigSettings {
 }
 
 let cachedConfig: IConfigSettings;
+
+// JSON settings need a small recursive merge; prototype keys must never be assigned.
+const mergeSettings = (defaults: any, overrides: any): any => {
+  const result: any = {};
+  [defaults, overrides].forEach((settings) => {
+    Object.entries(settings).forEach(([key, value]) => {
+      if (['__proto__', 'constructor', 'prototype'].includes(key)) {
+        return;
+      }
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = mergeSettings(result[key] || {}, value);
+      } else {
+        result[key] = Array.isArray(value) ? [...value] : value;
+      }
+    });
+  });
+  return result;
+};
 export const getCachedConfig = (): IConfigSettings => {
   return cachedConfig;
 };
@@ -83,7 +101,7 @@ export const get = (force?: boolean): IConfigSettings => {
   const userSettings = getUserSettings(pathToConfig);
 
   // Merge default and user settings
-  const settings: any = merge(defaultSettings, userSettings);
+  const settings: any = mergeSettings(defaultSettings, userSettings);
 
   // Get current version number
   const version = getPackageVersion();
